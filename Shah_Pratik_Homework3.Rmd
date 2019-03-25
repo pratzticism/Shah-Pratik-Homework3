@@ -1,0 +1,221 @@
+---
+title: "Pratik-homework3"
+author: "Pratik"
+date: "March 25, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+```{r } 
+
+library(readr)
+library(curl)
+##Problem 1##
+
+##A##
+
+v <- c(0, 1, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 1, 1, 0, 0, 1, 1, 1, 0, 
+    1, 1, 0, 1, 0, 1, 1)
+v2 <- c(1, 1, 0, 0, 1, 1, 1, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 
+    0, 1, 1, 0, 1, 1, 1)
+
+n1 <- length(v)
+n1
+p1 <- sum(v)
+p0 <- 0.1
+p0
+p2 <- sum(v2)
+n2 <- length(v2)
+alternative <- "two.sided"
+CL <- 0.95
+
+#Two Sample:#
+
+
+
+
+Z.prop.test2 <- function(p1,n1,p0,p2,n2,alternative,CL){
+  pstar <- (p1-p2)/n1-n2
+  phat1 <- p1/n1
+  phat2 <- p2/n2
+  pi <- p0
+z2 <- (phat2 - phat1)/sqrt((pstar * (1 - pstar)) * ((1/n1 + 1/n2)))
+n1*pi>5
+n1*(1-pi)>5
+n2*pi>5
+n2*(1-pi)>5
+p.upper <- 1 - pnorm(z2, lower.tail = TRUE)
+p.lower <- pnorm(z2, lower.tail = FALSE)
+p <- p.upper+p.lower
+pt <- prop.test(x = c(sum(v2), sum(v)), n = c(length(v2), length(v)), alternative = alternative, conf.level = CL, correct = FALSE)  
+results <- c(z2,p,pt$conf.int)
+return(results)
+
+}
+
+Z.prop.test2(p1,n1,p0,p2,n2,alternative,CL)
+
+##B##
+
+pt <- prop.test(x = c(sum(v2), sum(v)), n = c(length(v2), length(v)), alternative = alternative, conf.level = CL, correct = FALSE)
+pt
+
+
+##Problem 2##
+
+library(tibble)
+library(ggplot2)
+
+f <- curl("https://raw.githubusercontent.com/difiore/ADA-2019/master/KamilarAndCooperData.csv")
+d <- read.csv(f, header = TRUE, stringsAsFactors = FALSE)
+d <- as_tibble(d)
+attach(d)
+head(d)
+detach(d)
+d <- as.data.frame(d)
+
+d <- d[!(is.na(d$Brain_Size_Species_Mean)),]
+d <- d[!(is.na(d$MaxLongevity_m)),]
+
+g <- ggplot(data = d, aes(x = Brain_Size_Species_Mean, y = MaxLongevity_m,label="y=1.27x+248.95"))
+g <- g + geom_point()
+g <- g + geom_smooth(method = "lm", formula = y ~ x)
+g
+
+#Appending the fitten line#
+
+beta1 <- cor(d$Brain_Size_Species_Mean, d$MaxLongevity_m) * (sd(d$MaxLongevity_m)/sd(d$Brain_Size_Species_Mean))
+
+beta0 <- mean(d$MaxLongevity_m) - beta1 * mean(d$Brain_Size_Species_Mean)
+
+beta1
+beta0
+
+plot<- g+geom_text(x=100,y=775,label="y=1.27x+248.95")
+plot
+
+
+m<- lm(data=d,MaxLongevity_m~Brain_Size_Species_Mean)
+
+ci <- predict(m, newdata = data.frame(Brain_Size_Species_Mean = beta1), interval = "confidence", 
+    level = 0.90)
+ci
+
+beta1==0
+
+#The point estimate beta1 = 250.435, 90% value falls between 232.177 & 268.6945 and we reject the null as beta1 != 0#
+
+##Add lines for the 90% confidence and prediction interval bands on the plot, and add a legend to differentiate between the lines##
+
+ci <- predict(m, newdata = data.frame(Brain_Size_Species_Mean = d$Brain_Size_Species_Mean), interval = "confidence", 
+    level = 0.90)
+
+ci
+
+df <- cbind(d$Brain_Size_Species_Mean,d$MaxLongevity_m,ci)
+df <- as.data.frame
+head(df)
+
+names(df) <- c("BS", "ML", "BFit", "CIL", "CIU")
+
+pr1 <- predict(m, newdata = data.frame(Brain_Size_Species_Mean = d$Brain_Size_Species_Mean), interval = "prediction", 
+    level = 0.90)
+pr1
+
+df <- cbind(df,pr1)
+head(df)
+names(df) <- c("BS", "ML", "BFit", "CIL", "CIU", "PFit", "PL", "PU")
+
+plot <- plot+geom_line(data=df,aes(x = BS, y = CIL, colour = "blue"),size = 1, show.legend = TRUE)+geom_line(data=df,aes(x = BS, y = CIU, colour = "blue"),size = 1, show.legend = TRUE)+geom_line(data=df,aes(x = BS, y = PL, colour = "Yellow"),size = 1, show.legend = TRUE)+geom_line(data=df,aes(x = BS, y = PU, colour = "Yellow"),size = 1, show.legend = TRUE)+scale_color_discrete(name = "Leg", labels = c("Confidence", "Prediction"))
+
+plot
+
+#Produce a point estimate and associated 90% prediction interval for the longevity of a species whose brain weight is 800 gm. Do you trust the model to predict observations accurately for this value of the explanatory variable? Why or why not?#
+
+pr2 <- predict(m, newdata = data.frame(Brain_Size_Species_Mean = 800), interval = "prediction", 
+    level = 0.90)
+pr2
+
+#Would not trust the model as it would be an outlier#
+
+##log(longevity)~log(brain size)##
+
+log_B <- log(d$Brain_Size_Species_Mean)
+log_M <- log(d$MaxLongevity_m)
+
+
+
+beta1_log <- cor(log_B, log_M) * (sd(log_M)/sd(log_B))
+
+beta0_log <- mean(log_M) - beta1_log * mean(log_B)
+
+beta1_log
+beta0_log
+
+g <- ggplot(data = d, aes(x = log_B, y = log_M,label="y=0.23x+4.87"))
+g <- g + geom_point()
+g <- g + geom_smooth(method = "lm", formula = y ~ x)
+g
+
+
+
+plotlog<- g+geom_text(x=2,y=6.25,label="y=0.23x+4.87")
+plotlog
+
+mlog<- lm(data=d,log_M~log_B)
+
+ci <- predict(mlog, newdata = data.frame(log_B = beta1_log), interval = "confidence", 
+    level = 0.90)
+ci
+
+beta1_log==0
+
+#The point estimate beta1 = 4.93, 90% value falls between 4.82 & 5.04 and we reject the null as beta1 != 0#
+
+##Add lines for the 90% confidence and prediction interval bands on the plot, and add a legend to differentiate between the lines##
+
+
+cilog <- predict(mlog, newdata = data.frame(log_Brain_Size_Species_Mean = log_B), interval = "confidence", 
+    level = 0.90)
+
+cilog
+
+dflog <- cbind(log_B,log_M,cilog)
+dflog <- as.data.frame(dflog)
+head(dflog)
+
+names(dflog) <- c("BSlog", "MLlog", "BFitlog", "CILlog", "CIUlog")
+
+head(dflog)
+
+pr1log <- predict(mlog, newdata = data.frame(log_Brain_Size_Species_Mean = log_B), interval = "prediction", 
+    level = 0.90)
+pr1log
+
+dflog <- cbind(dflog,pr1log)
+head(dflog)
+names(dflog) <- c("BSlog", "MLlog", "BFitlog", "CILlog", "CIUlog", "PFitlog", "PLlog", "PUlog1")
+
+
+plotlog <- plotlog+geom_line(data=dflog,aes(x = BSlog, y = CILlog, colour = "blue"),size = 1, show.legend = TRUE)+geom_line(data=dflog,aes(x = BSlog, y = CIUlog, colour = "blue"),size = 1, show.legend = TRUE)+geom_line(data=dflog,aes(x = BSlog, y = PLlog, colour = "Yellow"),size = 1, show.legend = TRUE)+geom_line(data=dflog,aes(x = BSlog, y = PUlog1, colour = "Yellow"),size = 1, show.legend = TRUE)+scale_color_discrete(name = "Leg", labels = c("Confidence", "Prediction"))
+
+plotlog
+
+
+
+#Produce a point estimate and associated 90% prediction interval for the longevity of a species whose brain weight is 800 gm. Do you trust the model to predict observations accurately for this value of the explanatory variable? Why or why not?#
+
+pr2 <- predict(mlog, newdata = data.frame(log_B = log(800)), interval = "prediction", 
+    level = 0.90)
+pr2
+
+#Would trust this model as it would be an outlier#
+
+#The log model looks better#
+
+
+```
+
+
