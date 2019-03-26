@@ -103,7 +103,6 @@ ci <- predict(m, newdata = data.frame(Brain_Size_Species_Mean = beta1), interval
     level = 0.90)
 ci
 
-beta1==0
 
 #The point estimate beta1 = 250.435, 90% value falls between 232.177 & 268.6945 and we reject the null as beta1 != 0#
 
@@ -114,11 +113,13 @@ ci <- predict(m, newdata = data.frame(Brain_Size_Species_Mean = d$Brain_Size_Spe
 
 ci
 
-df <- cbind(d$Brain_Size_Species_Mean,d$MaxLongevity_m,ci)
-df <- as.data.frame
-head(df)
+df <- cbind(d$Brain_Size_Species_Mean,d$MaxLongevity_m, ci)
+
+df <- as.data.frame(df)
 
 names(df) <- c("BS", "ML", "BFit", "CIL", "CIU")
+
+head(df)
 
 pr1 <- predict(m, newdata = data.frame(Brain_Size_Species_Mean = d$Brain_Size_Species_Mean), interval = "prediction", 
     level = 0.90)
